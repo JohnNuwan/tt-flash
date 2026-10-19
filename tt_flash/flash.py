@@ -509,15 +509,16 @@ def check_galaxy_eth_link_status(devices):
             eth_x, eth_y = eth_locations_noc_0[eth]
             link_error = device.noc_read32(noc_id, eth_x, eth_y, DEBUG_BUF_ADDR + 0x4*96)
             if link_error == LINK_INACTIVE_FAIL_DUMMY_PACKET:
-                link_errors[i] = eth
+                link_errors.setdefault(i, []).append(eth)
 
     if link_errors:
-        for board_idx, eth in link_errors.items():
-            print(
-                CConfig.COLOR.RED,
-                f"\t\tBoard {board_idx} has link error on eth port {eth}",
-                CConfig.COLOR.ENDC,
-            )
+        for board_idx, eth_ports in link_errors.items():
+            for eth in eth_ports:
+                print(
+                    CConfig.COLOR.RED,
+                    f"\t\tBoard {board_idx} has link error on eth port {eth}",
+                    CConfig.COLOR.ENDC,
+                )
         raise TTError(
             "Galaxy Ethernet link errors detected"
         )
@@ -601,7 +602,7 @@ def glx_6u_trays_reset(reinit=True, ubb_num="0xF", dev_num="0xFF", op_mode="0x0"
 
     # after re-init check eth status - only if doing a full galaxy reset.
     # If doing a partial reset, eth connections will be broken because eth training will go out of sync
-    if ubb_num == 0xF:
+    if (ubb_num if isinstance(ubb_num, int) else int(ubb_num, 0)) == 0xF:
         check_galaxy_eth_link_status(chips)
     # All went well
     print(
